@@ -1,0 +1,17 @@
+<launch>
+  <rosparam command="load" file="$(find ardusimple_rover)/config/ekf_ardusimple.yaml" />
+
+  <node pkg="robot_localization" type="ekf_localization_node" name="ekf_se_map" clear_params="true">
+    <!-- <remap from="odometry/filtered" to="odometry/filtered_map"/> -->
+  </node>
+
+  <node pkg="tf" type="static_transform_publisher" name="base_gps" args="0 0 0 0 0 0 /base_link /gps 100"/>
+
+  <node pkg="robot_localization" type="navsat_transform_node" name="navsat_transform_node" respawn="true" output="screen">
+    <rosparam command="load" file="$(find ardusimple_rover)/config/navsat_config.yaml" />
+    <remap from="/imu/data" to="/gps/navheading" />
+    <remap from="/gps/fix" to="/gps/fix" />
+    <param name="wait_for_datum" value="false" />
+  </node>
+
+</launch>

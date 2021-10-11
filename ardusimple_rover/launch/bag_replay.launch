@@ -1,0 +1,14 @@
+<launch>
+  <arg name="r" default="1"/>
+
+  <param name="/use_sim_time" value="true"/>
+
+  <node type="rviz" name="rviz" pkg="rviz" output="screen"/>
+
+  <!-- The rosbag should only contain /gps/* topics -->
+  <node pkg="rosbag" type="play" name="player" output="screen" args="--clock $(find ardusimple_rover)/bags/bag_filtered.bag -r $(arg r)"/>
+
+  <include file='$(find ardusimple_rover)/launch/demo.launch'/>
+  <include file='$(find ardusimple_rover)/launch/mapviz.launch'/>
+
+</launch>
