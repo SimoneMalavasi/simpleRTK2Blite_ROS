@@ -1,7 +1,7 @@
 debug: 1                    # Range 0-4 (0 means no debug statements will print)
 
-device: /dev/ttyUSB1
-frame_id: gps #TODO: change it in the future
+device: /dev/ttyUSB0
+frame_id: gps1 #TODO: change it in the future
 config_on_startup: false
 uart1:
   baudrate: 115200
