@@ -4,7 +4,7 @@ device: /dev/ttyUSB0
 frame_id: gps #TODO: change it in the future
 config_on_startup: false #DO NOT CHANGE OTHERWISE IT OVERWRITES THE MODULE CONFIGURATION
 uart1:
-  baudrate: 38400
+  baudrate: 115200
 rate: 1
 nav_rate: 1
 publish:
