@@ -29,13 +29,14 @@ $ catkin_make
 Launch the following nodes in order to retrieve data from simpleRTK2Blite and to visualize them on RVIZ
 
 ```
-$ roslaunch ardusimple_rover ardusimple_rover.launch  
+$ roslaunch ardusimple_rover ardusimple_rover_pair.launch  
 $ roslaunch ntrip_ros ntrip_ros.launch
 $ roslaunch ardusimple_rover mapviz.launch
 ```
 
 ## Topics
 The most relevant topics are the following ones:
-* `/gps/fix`: it shows gps fix data
+* `/gps1/fix`: it shows gps1 fix data
+* `/gps2/fix`: it shows gps1 fix data
 * `/diagnostics`: it shows important info about gps connection
 * `/rtcm`: it shows rtcm messages coming from NTRIP connection
