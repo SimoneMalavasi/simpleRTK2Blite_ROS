@@ -10,6 +10,7 @@ project(ardusimple_rover)
 find_package(catkin REQUIRED COMPONENTS
   ublox_gps
   mapviz
+  rospy
 )
 
 ## System dependencies are found with CMake's conventions
