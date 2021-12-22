@@ -3,8 +3,8 @@
 
 import rospy
 import rostopic
-from PySide2.QtCore import QSize, Qt
-from PySide2.QtWidgets import QApplication, QWidget, QMainWindow, QLabel
+from PySide2.QtCore import QSize, Qt,Slot
+from PySide2.QtWidgets import QApplication, QWidget, QMainWindow, QLabel, QPushButton
 from PySide2.QtGui import QPixmap, QTransform
 import sys
 from sensor_msgs.msg import NavSatFix
@@ -20,11 +20,14 @@ meanLat = math.radians(45.454847)   # TODO: CHANGE THIS VALUE WITH THE RIGHT ONE
 gps1LedPosition = (100, 100)
 gps2LedPosition = (200, 100)
 carPosition = (350, 100)
+buttonPosition = (400, 200)
 ledSize = (50, 50)
 carSize = (40, 70)
 gps1HzPosition = (100, 300)
+buttonSize = (100,30)
 
 class MainWindow(QMainWindow):
+
     def __init__(self):
         super(MainWindow, self).__init__()
         self.setWindowTitle("Dashboard")
@@ -36,6 +39,13 @@ class MainWindow(QMainWindow):
         self.pixmapGreenLed = self.pixmapGreenLed.scaled(ledSize[0], ledSize[1])
         self.pixmapRedLed = self.pixmapRedLed.scaled(ledSize[0], ledSize[1])
         self.pixmapCar = self.pixmapCar.scaled(carSize[0], carSize[1])
+        self.buttonStart = QPushButton("Start", self)
+        self.buttonStart.move(buttonPosition[0], buttonPosition[1])
+        self.buttonStart.setFixedSize(QSize(buttonSize[0], buttonSize[1]))
+        self.buttonStop = QPushButton("Stop", self)
+        self.buttonStop.move(buttonPosition[0], buttonPosition[1])
+        self.buttonStop.setFixedSize(QSize(buttonSize[0], buttonSize[1]))
+        self.buttonStop.setVisible(0)
         self.gps1Led = QLabel(self)
         self.gps1Led.setFixedSize(QSize(ledSize[0], ledSize[1]))
         self.gps1Led.setPixmap(self.pixmapYellowLed)
@@ -46,8 +56,11 @@ class MainWindow(QMainWindow):
         self.fix1Text = QLabel(self)
         self.fix1Text.setText("FIX")
         self.fix1Text.move(gps1LedPosition[0], gps1LedPosition[1]-30)
+        self.percentage1Text = QLabel(self)
+        self.percentage1Text.setText("")
+        self.percentage1Text.move(gps1LedPosition[0], gps1LedPosition[1]+80)
         self.gps1HzText = QLabel(self)
-        self.gps1HzText.setText("")
+        self.gps1HzText.setText("Hz")
         self.gps1HzText.move(gps1HzPosition[0], gps1HzPosition[1])
         self.gps2Led = QLabel(self)
         self.gps2Led.setFixedSize(QSize(ledSize[0], ledSize[1]))
@@ -59,8 +72,11 @@ class MainWindow(QMainWindow):
         self.fix2Text = QLabel(self)
         self.fix2Text.setText("FIX")
         self.fix2Text.move(gps2LedPosition[0]+5, gps2LedPosition[1]-30)
+        self.percentage2Text = QLabel(self)
+        self.percentage2Text.setText("")
+        self.percentage2Text.move(gps2LedPosition[0], gps2LedPosition[1]+80)
         self.gps2HzText = QLabel(self)
-        self.gps2HzText.setText("")
+        self.gps2HzText.setText("Hz")
         self.gps2HzText.move(gps1HzPosition[0], gps1HzPosition[1]+30)
         self.car = QLabel(self)
         self.car.setFixedSize(QSize(carSize[0], carSize[1]))
@@ -82,6 +98,15 @@ class MainWindow(QMainWindow):
         self.old_fix2 = -10
         self.gps1Hz = 0.0
         self.gps2Hz = 0.0
+        self.countLogGps1 = 0.0  # counter for get overall number GPS1 sample
+        self.countLogGps2 = 0.0  # counter for get overall number GPS2 sample
+        self.countLogFix1 = 0.0  # counter for get % fix GPS1
+        self.countLogFix2 = 0.0  # counter for get % fix GPS2
+        self.percentageFix1 = 0.0
+        self.percentageFix2 = 0.0
+        self.keepCount = 0
+        self.buttonStart.clicked.connect(self.start_logging)
+        self.buttonStop.clicked.connect(self.stop_logging)
         self.subscribe_data()
 
     def subscribe_data(self):
@@ -102,8 +127,15 @@ class MainWindow(QMainWindow):
             if self.fix1 == 2:
                 self.gps1Led.setPixmap(self.pixmapGreenLed)
                 self.fix1Text.setText("FIX RTK")
+        if self.keepCount:
+            self.countLogGps1 += 1  # counter for get % fix GPS1
+            if self.fix1 == 2:
+                self.countLogFix1 += 1
+            if self.countLogGps1 != 0:
+                self.percentageFix1 = self.countLogFix1/self.countLogGps1 * 100
+                self.percentage1Text.setText(str(round(self.percentageFix1, 2)) + ' %')
         self.r1.callback_hz(NavSatFix, topic='gps1/fix')
-        print(self.r1.get_hz(topic='gps1/fix')[0])
+        self.gps1HzText.setText('GPS1 Hz: ' + str(round(self.r1.get_hz(topic='gps1/fix')[0], 2))+' Hz')
         self.old_fix1 = self.fix1
 
     def get_gps2_data(self, msg):
@@ -120,7 +152,17 @@ class MainWindow(QMainWindow):
             if self.fix2 == 2:
                 self.gps2Led.setPixmap(self.pixmapGreenLed)
                 self.fix2Text.setText("FIX RTK")
+        if self.keepCount:
+            self.countLogGps2 += 1  # counter for get % fix GPS2
+            if self.fix2 == 2:
+                self.countLogFix2 += 1
+            if self.countLogGps2 != 0:
+                self.percentageFix2 = self.countLogFix2/self.countLogGps2 * 100.00
+                self.percentage2Text.setText(str(round(self.percentageFix2, 2)) + ' %')
         self.old_fix2 = self.fix2
+        self.r2.callback_hz(NavSatFix, topic='gps2/fix')
+        self.gps2HzText.setText('GPS2 Hz: ' + str(round(self.r2.get_hz(topic='gps2/fix')[0], 2))+' Hz')
+        self.old_fix1 = self.fix1
         self.get_heading()
 
     def get_heading(self):
@@ -136,6 +178,21 @@ class MainWindow(QMainWindow):
         self.egoGpsPoseF[1] = self.egoLonF*lon_deg_km*math.cos(meanLat)
         self.egoGpsPoseB[0] = self.egoLatB*lat_deg_km
         self.egoGpsPoseB[1] = self.egoLonB*lon_deg_km*math.cos(meanLat)
+
+    def start_logging(self):
+        self.keepCount = 1
+        self.buttonStart.setVisible(0)
+        self.buttonStop.setVisible(1)
+
+    def stop_logging(self):
+        self.keepCount = 0
+        self.countLogGps1 = 0.0  # counter for get overall number GPS1 sample
+        self.countLogGps2 = 0.0  # counter for get overall number GPS2 sample
+        self.countLogFix1 = 0.0  # counter for get % fix GPS1
+        self.countLogFix2 = 0.0  # counter for get % fix GPS2
+        self.buttonStart.setVisible(1)
+        self.buttonStop.setVisible(0)
+
 
 if __name__ == '__main__':
     rospy.init_node('dashboard')
