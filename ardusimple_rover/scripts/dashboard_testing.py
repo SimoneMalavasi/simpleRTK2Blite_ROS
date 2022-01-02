@@ -3,8 +3,9 @@
 
 import rospy
 import rostopic
+import subprocess, shlex, psutil
 from PySide2.QtCore import QSize, Qt,Slot
-from PySide2.QtWidgets import QApplication, QWidget, QMainWindow, QLabel, QPushButton
+from PySide2.QtWidgets import QApplication, QWidget, QMainWindow, QLabel, QPushButton, QFileDialog,  QLineEdit
 from PySide2.QtGui import QPixmap, QTransform
 import sys
 from sensor_msgs.msg import NavSatFix
@@ -21,10 +22,12 @@ gps1LedPosition = (100, 100)
 gps2LedPosition = (200, 100)
 carPosition = (350, 100)
 buttonPosition = (400, 200)
+lineBagPosition = (130, 250)
 ledSize = (50, 50)
 carSize = (40, 70)
 gps1HzPosition = (100, 300)
-buttonSize = (100,30)
+buttonSize = (100, 30)
+lineBagSize = (200, 30)
 
 class MainWindow(QMainWindow):
 
@@ -46,6 +49,16 @@ class MainWindow(QMainWindow):
         self.buttonStop.move(buttonPosition[0], buttonPosition[1])
         self.buttonStop.setFixedSize(QSize(buttonSize[0], buttonSize[1]))
         self.buttonStop.setVisible(0)
+        self.buttonBrowse = QPushButton("Select Bag Folder", self)
+        self.buttonBrowse.move(buttonPosition[0]-50, buttonPosition[1]+50)
+        self.buttonBrowse.setFixedSize(QSize(buttonSize[0]+50, buttonSize[1]))
+        self.labelBag = QLabel(self)
+        self.labelBag.setText("Bag Name: ")
+        self.labelBag.move(lineBagPosition[0]-100, lineBagPosition[1])
+        self.gps1Led = QLabel(self)
+        self.lineBag = QLineEdit(self)
+        self.lineBag.move(lineBagPosition[0], lineBagPosition[1])
+        self.lineBag.setFixedSize(QSize(lineBagSize[0], lineBagSize[1]))
         self.gps1Led = QLabel(self)
         self.gps1Led.setFixedSize(QSize(ledSize[0], ledSize[1]))
         self.gps1Led.setPixmap(self.pixmapYellowLed)
@@ -60,7 +73,7 @@ class MainWindow(QMainWindow):
         self.percentage1Text.setText("")
         self.percentage1Text.move(gps1LedPosition[0], gps1LedPosition[1]+80)
         self.gps1HzText = QLabel(self)
-        self.gps1HzText.setText("Hz")
+        self.gps1HzText.setText("")
         self.gps1HzText.move(gps1HzPosition[0], gps1HzPosition[1])
         self.gps2Led = QLabel(self)
         self.gps2Led.setFixedSize(QSize(ledSize[0], ledSize[1]))
@@ -76,7 +89,7 @@ class MainWindow(QMainWindow):
         self.percentage2Text.setText("")
         self.percentage2Text.move(gps2LedPosition[0], gps2LedPosition[1]+80)
         self.gps2HzText = QLabel(self)
-        self.gps2HzText.setText("Hz")
+        self.gps2HzText.setText("")
         self.gps2HzText.move(gps1HzPosition[0], gps1HzPosition[1]+30)
         self.car = QLabel(self)
         self.car.setFixedSize(QSize(carSize[0], carSize[1]))
@@ -105,8 +118,13 @@ class MainWindow(QMainWindow):
         self.percentageFix1 = 0.0
         self.percentageFix2 = 0.0
         self.keepCount = 0
+        self.bag_dir = ""
+        self.bag_command = ""
+        self.bag_command_sel = ""
+        self.bag_proc = ""  # REQUIRED FOR SAVING BAG
         self.buttonStart.clicked.connect(self.start_logging)
         self.buttonStop.clicked.connect(self.stop_logging)
+        self.buttonBrowse.clicked.connect(self.select_bag_folder)
         self.subscribe_data()
 
     def subscribe_data(self):
@@ -135,7 +153,7 @@ class MainWindow(QMainWindow):
                 self.percentageFix1 = self.countLogFix1/self.countLogGps1 * 100
                 self.percentage1Text.setText(str(round(self.percentageFix1, 2)) + ' %')
         self.r1.callback_hz(NavSatFix, topic='gps1/fix')
-        self.gps1HzText.setText('GPS1 Hz: ' + str(round(self.r1.get_hz(topic='gps1/fix')[0], 2))+' Hz')
+        self.gps1HzText.setText('GPS1: ' + str(round(self.r1.get_hz(topic='gps1/fix')[0], 2))+' Hz')
         self.old_fix1 = self.fix1
 
     def get_gps2_data(self, msg):
@@ -161,7 +179,7 @@ class MainWindow(QMainWindow):
                 self.percentage2Text.setText(str(round(self.percentageFix2, 2)) + ' %')
         self.old_fix2 = self.fix2
         self.r2.callback_hz(NavSatFix, topic='gps2/fix')
-        self.gps2HzText.setText('GPS2 Hz: ' + str(round(self.r2.get_hz(topic='gps2/fix')[0], 2))+' Hz')
+        self.gps2HzText.setText('GPS2: ' + str(round(self.r2.get_hz(topic='gps2/fix')[0], 2))+' Hz')
         self.old_fix1 = self.fix1
         self.get_heading()
 
@@ -183,15 +201,30 @@ class MainWindow(QMainWindow):
         self.keepCount = 1
         self.buttonStart.setVisible(0)
         self.buttonStop.setVisible(1)
+        # BAG RECORDING
+        if self.lineBag.text() != "":
+            self.bag_command = "rosbag record -O " + self.bag_dir + "/" + self.lineBag.text() + ".bag /gps1/fix /gps2/fix diagnostics"
+            print(self.bag_command)
+            self.bag_command_sel = shlex.split(self.bag_command)
+            self.bag_proc = subprocess.Popen(self.bag_command_sel)
 
     def stop_logging(self):
         self.keepCount = 0
-        self.countLogGps1 = 0.0  # counter for get overall number GPS1 sample
-        self.countLogGps2 = 0.0  # counter for get overall number GPS2 sample
-        self.countLogFix1 = 0.0  # counter for get % fix GPS1
-        self.countLogFix2 = 0.0  # counter for get % fix GPS2
+        self.countLogGps1 = 0.0  # counter for getting overall number GPS1 sample
+        self.countLogGps2 = 0.0  # counter for getting overall number GPS2 sample
+        self.countLogFix1 = 0.0  # counter for getting % fix GPS1
+        self.countLogFix2 = 0.0  # counter for getting % fix GPS2
         self.buttonStart.setVisible(1)
         self.buttonStop.setVisible(0)
+        # STOP BAG RECORDING
+        for proc in psutil.process_iter():
+            if "record" in proc.name() and set(self.bag_command_sel[2:]).issubset(proc.cmdline()):
+                proc.send_signal(subprocess.signal.SIGINT)
+        if self.bag_proc != "":
+            self.bag_proc.send_signal(subprocess.signal.SIGINT)
+
+    def select_bag_folder(self):
+        self.bag_dir = str(QFileDialog.getExistingDirectory(self, "Select Directory"))
 
 
 if __name__ == '__main__':
