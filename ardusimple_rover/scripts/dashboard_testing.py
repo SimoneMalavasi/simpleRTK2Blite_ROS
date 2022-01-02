@@ -2,12 +2,13 @@
 # coding: utf8
 
 import rospy
-import rostopic
+import rostopic, roslaunch
 import subprocess, shlex, psutil
 from PySide2.QtCore import QSize, Qt,Slot
 from PySide2.QtWidgets import QApplication, QWidget, QMainWindow, QLabel, QPushButton, QFileDialog,  QLineEdit
 from PySide2.QtGui import QPixmap, QTransform
 import sys
+import os
 from sensor_msgs.msg import NavSatFix
 import math
 import numpy as np
@@ -21,12 +22,14 @@ meanLat = math.radians(45.454847)   # TODO: CHANGE THIS VALUE WITH THE RIGHT ONE
 gps1LedPosition = (100, 100)
 gps2LedPosition = (200, 100)
 carPosition = (350, 100)
-buttonPosition = (400, 200)
+buttonPosition = (390, 200)
+launchPosition = (280, 200)
+browsePosition = (340, 250)
 lineBagPosition = (130, 250)
 ledSize = (50, 50)
 carSize = (40, 70)
 gps1HzPosition = (100, 300)
-buttonSize = (100, 30)
+buttonSize = (110, 30)
 lineBagSize = (200, 30)
 
 class MainWindow(QMainWindow):
@@ -50,11 +53,18 @@ class MainWindow(QMainWindow):
         self.buttonStop.setFixedSize(QSize(buttonSize[0], buttonSize[1]))
         self.buttonStop.setVisible(0)
         self.buttonBrowse = QPushButton("Select Bag Folder", self)
-        self.buttonBrowse.move(buttonPosition[0]-50, buttonPosition[1]+50)
+        self.buttonBrowse.move(browsePosition[0], browsePosition[1])
         self.buttonBrowse.setFixedSize(QSize(buttonSize[0]+50, buttonSize[1]))
+        self.buttonLaunch = QPushButton("Connect GPS", self)
+        self.buttonLaunch.move(launchPosition[0], launchPosition[1])
+        self.buttonLaunch.setFixedSize(QSize(buttonSize[0], buttonSize[1]))
+        self.buttonStopLaunch = QPushButton("Disconnect GPS", self)
+        self.buttonStopLaunch.move(launchPosition[0], launchPosition[1])
+        self.buttonStopLaunch.setFixedSize(QSize(buttonSize[0], buttonSize[1]))
+        self.buttonStopLaunch.setVisible(0)
         self.labelBag = QLabel(self)
         self.labelBag.setText("Bag Name: ")
-        self.labelBag.move(lineBagPosition[0]-100, lineBagPosition[1])
+        self.labelBag.move(lineBagPosition[0]-80, lineBagPosition[1])
         self.gps1Led = QLabel(self)
         self.lineBag = QLineEdit(self)
         self.lineBag.move(lineBagPosition[0], lineBagPosition[1])
@@ -125,6 +135,8 @@ class MainWindow(QMainWindow):
         self.buttonStart.clicked.connect(self.start_logging)
         self.buttonStop.clicked.connect(self.stop_logging)
         self.buttonBrowse.clicked.connect(self.select_bag_folder)
+        self.buttonLaunch.clicked.connect(self.launch_gps_nodes)
+        self.buttonStopLaunch.clicked.connect(self.stop_gps_nodes)
         self.subscribe_data()
 
     def subscribe_data(self):
@@ -226,6 +238,23 @@ class MainWindow(QMainWindow):
     def select_bag_folder(self):
         self.bag_dir = str(QFileDialog.getExistingDirectory(self, "Select Directory"))
 
+    def launch_gps_nodes(self):
+        uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
+        roslaunch.configure_logging(uuid)
+        package_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        launchFIX_path = os.path.dirname(package_path)+"/ntrip_ros/launch/ntrip_ros.launch"
+        launchGPS_path = package_path + "/launch/ardusimple_rover_pair.launch"
+        self.launchGPS = roslaunch.parent.ROSLaunchParent(uuid, [launchGPS_path])
+        self.launchFIX = roslaunch.parent.ROSLaunchParent(uuid, [launchFIX_path])
+        self.launchGPS.start()
+        self.launchFIX.start()
+        self.buttonStopLaunch.setVisible(1)
+
+    def stop_gps_nodes(self):
+        self.launchGPS.shutdown() #stops the ROSLaunchParent object
+        self.launchFIX.shutdown() #stops the ROSLaunchParent object
+        self.buttonStopLaunch.setVisible(0)
+        self.buttonLaunch.setVisible(1)
 
 if __name__ == '__main__':
     rospy.init_node('dashboard')
