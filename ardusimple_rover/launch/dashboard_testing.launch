@@ -1,0 +1,4 @@
+<launch>
+	<node pkg="ardusimple_rover" name="dashboard_testing" type="dashboard_testing.py" />
+
+</launch>

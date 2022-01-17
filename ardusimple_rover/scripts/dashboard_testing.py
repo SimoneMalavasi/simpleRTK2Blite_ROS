@@ -31,6 +31,31 @@ carSize = (40, 70)
 gps1HzPosition = (100, 300)
 buttonSize = (110, 30)
 lineBagSize = (200, 30)
+nmeaLink = "<a href=\"https://www.nmeagen.org/\">'NMEA GENERATOR'</a>"
+
+class StartWindow(QMainWindow):
+
+    def __init__(self):
+        super(StartWindow, self).__init__()
+        self.w = None
+        self.setFixedSize(QSize(500, 400))
+        self.labelNmeaLink = QLabel(self)
+        self.labelNmeaLink.setText(nmeaLink)
+        self.labelNmeaLink.setOpenExternalLinks(True)
+        self.labelNmeaLink.move(lineBagPosition[0]-80, lineBagPosition[1])
+        self.labelNmeaLink.setFixedSize(QSize(lineBagSize[0],lineBagSize[1]))
+        self.pushButton = QPushButton("click me",self)
+        self.pushButton.move(launchPosition[0], launchPosition[1])
+        self.pushButton.setFixedSize(QSize(buttonSize[0], buttonSize[1]))
+        self.pushButton.clicked.connect(self.on_pushButton_clicked)
+
+    def on_pushButton_clicked(self):
+        if self.isVisible():
+            self.hide()
+        if self.w is None:
+            self.w = MainWindow()
+            self.w.show()
+
 
 class MainWindow(QMainWindow):
 
@@ -221,6 +246,8 @@ class MainWindow(QMainWindow):
             self.bag_proc = subprocess.Popen(self.bag_command_sel)
 
     def stop_logging(self):
+        txtLines = ['Bag Name: '+ self.lineBag.text(), 'GPS1 FIX: ' + str(self.percentageFix1) + "%", 'GPS2 FIX: ' +
+                    str(self.percentageFix2)+ '%']
         self.keepCount = 0
         self.countLogGps1 = 0.0  # counter for getting overall number GPS1 sample
         self.countLogGps2 = 0.0  # counter for getting overall number GPS2 sample
@@ -234,6 +261,9 @@ class MainWindow(QMainWindow):
                 proc.send_signal(subprocess.signal.SIGINT)
         if self.bag_proc != "":
             self.bag_proc.send_signal(subprocess.signal.SIGINT)
+            with open(self.bag_dir + "/" + self.lineBag.text()+".txt", 'w') as f:
+                f.write('\n'.join(txtLines))
+            print("Stopped logging " + self.bag_dir + "/" + self.lineBag.text() + ".bag")
 
     def select_bag_folder(self):
         self.bag_dir = str(QFileDialog.getExistingDirectory(self, "Select Directory"))
@@ -256,11 +286,12 @@ class MainWindow(QMainWindow):
         self.buttonStopLaunch.setVisible(0)
         self.buttonLaunch.setVisible(1)
 
+
 if __name__ == '__main__':
     rospy.init_node('dashboard')
     try:
         app = QApplication(sys.argv)
-        window = MainWindow()
+        window = StartWindow()
         window.show()
         app.exec_()
     except rospy.ROSInterruptException:
