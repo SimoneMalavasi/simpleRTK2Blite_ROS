@@ -2,12 +2,8 @@
 
 <launch>
   <node pkg="ntrip_ros" type="ntripclient.py" name="ntrip_ros">
- 	 <param name="rtcm_topic" value="/rtcm"/>
- 	 <param name="ntrip_server" value="158.102.7.10:2101"/>
- 	 <param name="ntrip_user" value=""/>
- 	 <param name="ntrip_pass" value=""/>
- 	 <param name="ntrip_stream" value="GAL_VRS_MSM5"/>
- 	 <param name="nmea_gga" value="$GPGGA,091501.625,4528.721,N,00913.975,E,1,12,1.0,0.0,M,0.0,M,,*6C"/>
+ 	 <rosparam command="load" 
+              file="$(find ntrip_ros)/config/ntrip_ros.yaml" />
   </node>
 </launch>
 
