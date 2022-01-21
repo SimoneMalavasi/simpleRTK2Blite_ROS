@@ -31,7 +31,12 @@ carSize = (40, 70)
 gps1HzPosition = (100, 300)
 buttonSize = (110, 30)
 lineBagSize = (200, 30)
+lineUserPosition = (130, 50)
+lineUserSize = lineBagSize
 nmeaLink = "<a href=\"https://www.nmeagen.org/\">'NMEA GENERATOR'</a>"
+package_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+launchFIX_path = os.path.dirname(package_path)+"/ntrip_ros/launch/ntrip_ros.launch"
+launchGPS_path = package_path + "/launch/ardusimple_rover_pair.launch"
 
 class StartWindow(QMainWindow):
 
@@ -44,17 +49,57 @@ class StartWindow(QMainWindow):
         self.labelNmeaLink.setOpenExternalLinks(True)
         self.labelNmeaLink.move(lineBagPosition[0]-80, lineBagPosition[1])
         self.labelNmeaLink.setFixedSize(QSize(lineBagSize[0],lineBagSize[1]))
-        self.pushButton = QPushButton("click me",self)
-        self.pushButton.move(launchPosition[0], launchPosition[1])
-        self.pushButton.setFixedSize(QSize(buttonSize[0], buttonSize[1]))
-        self.pushButton.clicked.connect(self.on_pushButton_clicked)
+        self.userText = QLabel(self)
+        self.userText.setText("User: ")
+        self.userText.move(lineUserPosition[0] - 50, lineUserPosition[1])
+        self.lineUser = QLineEdit(self)
+        self.lineUser.move(lineUserPosition[0], lineUserPosition[1])
+        self.lineUser.setFixedSize(QSize(lineUserSize[0], lineUserSize[1]))
+        self.passText = QLabel(self)
+        self.passText.setText("Pass: ")
+        self.passText.move(lineUserPosition[0] - 50, lineUserPosition[1]+30)
+        self.linePass = QLineEdit(self)
+        self.linePass.move(lineUserPosition[0], lineUserPosition[1]+30)
+        self.linePass.setFixedSize(QSize(lineUserSize[0], lineUserSize[1]))
+        self.nmeaText = QLabel(self)
+        self.nmeaText.setText("Nmea GGA: ")
+        self.nmeaText.move(lineUserPosition[0] - 100, lineUserPosition[1]+60)
+        self.lineNmea = QLineEdit(self)
+        self.lineNmea.move(lineUserPosition[0], lineUserPosition[1]+60)
+        self.lineNmea.setFixedSize(QSize(lineUserSize[0], lineUserSize[1]))
+        self.changeButton = QPushButton("Change", self)
+        self.changeButton.move(launchPosition[0] - 60, lineBagPosition[1])
+        self.changeButton.setFixedSize(QSize(buttonSize[0], buttonSize[1]))
+        self.changeButton.clicked.connect(self.on_changeButton_clicked)
+        self.noChangeButton = QPushButton("Don't Change", self)
+        self.noChangeButton.move(launchPosition[0]+60, lineBagPosition[1])
+        self.noChangeButton.setFixedSize(QSize(buttonSize[0], buttonSize[1]))
+        self.noChangeButton.clicked.connect(self.on_noChangeButton_clicked)
 
-    def on_pushButton_clicked(self):
+    def on_changeButton_clicked(self):
+        if self.isVisible():
+            self.hide()
+        if self.w is None:
+            self.change_yaml()
+            self.w = MainWindow()
+            self.w.show()
+
+    def on_noChangeButton_clicked(self):
         if self.isVisible():
             self.hide()
         if self.w is None:
             self.w = MainWindow()
             self.w.show()
+
+    def change_yaml(self):
+        yamlFile = open(os.path.dirname(package_path) + "/ntrip_ros/config/ntrip_ros.yaml", "r")
+        yamlLines = yamlFile.readlines()
+        yamlLines[2] = "ntrip_user: " + self.lineUser.text() + "\n"
+        yamlLines[3] = "ntrip_pass: " + self.linePass.text() + "\n"
+        yamlLines[5] = "nmea_gga: " + self.lineNmea.text()
+        yamlFile = open(os.path.dirname(package_path) + "/ntrip_ros/config/ntrip_ros.yaml", "w")
+        yamlFile.writelines(yamlLines)
+        yamlFile.close()
 
 
 class MainWindow(QMainWindow):
@@ -280,9 +325,6 @@ class MainWindow(QMainWindow):
     def launch_gps_nodes(self):
         uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
         roslaunch.configure_logging(uuid)
-        package_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        launchFIX_path = os.path.dirname(package_path)+"/ntrip_ros/launch/ntrip_ros.launch"
-        launchGPS_path = package_path + "/launch/ardusimple_rover_pair.launch"
         self.launchGPS = roslaunch.parent.ROSLaunchParent(uuid, [launchGPS_path])
         self.launchFIX = roslaunch.parent.ROSLaunchParent(uuid, [launchFIX_path])
         self.launchGPS.start()
