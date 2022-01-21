@@ -1,0 +1,7 @@
+rtcm_topic: /rtcm
+ntrip_server: 158.102.7.10:2101
+ntrip_user: 
+ntrip_pass: 
+ntrip_stream: RTK_MAC/MAX_RTCM3
+nmea_gga: $GPGGA,144916.821,4528.713,N,00915.422,E,1,12,1.0,0.0,M,0.0,M,,*6D
+

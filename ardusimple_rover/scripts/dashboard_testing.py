@@ -222,7 +222,16 @@ class MainWindow(QMainWindow):
 
     def get_heading(self):
         self.polar_to_cartesian()
-        self.egoHead = -math.atan2(self.egoGpsPoseF[1]-self.egoGpsPoseB[1], self.egoGpsPoseF[0]-self.egoGpsPoseB[0])#  [rad] TODO: CHECK THAT THE SIGN IS CORRECT
+        self.polar_to_cartesian()
+        egoLonF = math.radians(self.egoLonF)
+        egoLonB = math.radians(self.egoLonB)
+        egoLatF = math.radians(self.egoLatF)
+        egoLatB = math.radians(self.egoLatB)
+        egoDeltaLon = egoLonF-egoLonB
+        X = math.cos(egoLatF)*math.sin(egoDeltaLon)
+        Y = math.cos(egoLatB)*math.sin(egoLatF)-math.sin(egoLatB)*math.cos(egoLatF)*math.cos(egoDeltaLon)
+        self.egoHead = math.atan2(X, Y)
+        #self.egoHead = -math.atan2(self.egoGpsPoseF[1]-self.egoGpsPoseB[1], self.egoGpsPoseF[0]-self.egoGpsPoseB[0])#  [rad] TODO: CHECK THAT THE SIGN IS CORRECT
         t = QTransform()
         t.rotate(math.degrees(self.egoHead))
         rotated_pixmap = self.pixmapCar.transformed(t)
