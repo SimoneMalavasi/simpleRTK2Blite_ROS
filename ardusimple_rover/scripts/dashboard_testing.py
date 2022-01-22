@@ -6,7 +6,7 @@ import rostopic, roslaunch
 import subprocess, shlex, psutil
 from PySide2.QtCore import QSize, Qt,Slot
 from PySide2.QtWidgets import QApplication, QWidget, QMainWindow, QLabel, QPushButton, QFileDialog,  QLineEdit
-from PySide2.QtGui import QPixmap, QTransform
+from PySide2.QtGui import QPixmap, QTransform, QFont
 import sys
 import os
 from sensor_msgs.msg import NavSatFix
@@ -40,8 +40,12 @@ launchGPS_path = package_path + "/launch/ardusimple_rover_pair.launch"
 
 class StartWindow(QMainWindow):
 
+    yamlFile = open(os.path.dirname(package_path) + "/ntrip_ros/config/ntrip_ros.yaml", "r")
+    yamlLines = yamlFile.readlines()
+
     def __init__(self):
         super(StartWindow, self).__init__()
+        self.setWindowTitle("Ntrip Params")
         self.w = None
         self.setFixedSize(QSize(500, 400))
         self.labelNmeaLink = QLabel(self)
@@ -49,24 +53,32 @@ class StartWindow(QMainWindow):
         self.labelNmeaLink.setOpenExternalLinks(True)
         self.labelNmeaLink.move(lineBagPosition[0]-80, lineBagPosition[1])
         self.labelNmeaLink.setFixedSize(QSize(lineBagSize[0],lineBagSize[1]))
+        self.titleText = QLabel(self)
+        self.titleText.setText("NTRIP Params")
+        self.titleText.move(lineUserPosition[0] + 20, lineUserPosition[1]-40)
+        self.titleText.setFixedSize(QSize(lineUserSize[0], lineUserSize[1]))
+        self.titleText.setFont(QFont('Times', 20))
         self.userText = QLabel(self)
         self.userText.setText("User: ")
         self.userText.move(lineUserPosition[0] - 50, lineUserPosition[1])
         self.lineUser = QLineEdit(self)
         self.lineUser.move(lineUserPosition[0], lineUserPosition[1])
         self.lineUser.setFixedSize(QSize(lineUserSize[0], lineUserSize[1]))
+        self.lineUser.setText(self.yamlLines[2].replace("ntrip_user: ", ""))
         self.passText = QLabel(self)
         self.passText.setText("Pass: ")
         self.passText.move(lineUserPosition[0] - 50, lineUserPosition[1]+30)
         self.linePass = QLineEdit(self)
         self.linePass.move(lineUserPosition[0], lineUserPosition[1]+30)
         self.linePass.setFixedSize(QSize(lineUserSize[0], lineUserSize[1]))
+        self.linePass.setText(self.yamlLines[3].replace("ntrip_pass: ", ""))
         self.nmeaText = QLabel(self)
         self.nmeaText.setText("Nmea GGA: ")
-        self.nmeaText.move(lineUserPosition[0] - 100, lineUserPosition[1]+60)
+        self.nmeaText.move(lineUserPosition[0] - 90, lineUserPosition[1]+60)
         self.lineNmea = QLineEdit(self)
         self.lineNmea.move(lineUserPosition[0], lineUserPosition[1]+60)
         self.lineNmea.setFixedSize(QSize(lineUserSize[0], lineUserSize[1]))
+        self.lineNmea.setText(self.yamlLines[5].replace("nmea_gga: ", ""))
         self.changeButton = QPushButton("Change", self)
         self.changeButton.move(launchPosition[0] - 60, lineBagPosition[1])
         self.changeButton.setFixedSize(QSize(buttonSize[0], buttonSize[1]))
@@ -92,14 +104,12 @@ class StartWindow(QMainWindow):
             self.w.show()
 
     def change_yaml(self):
-        yamlFile = open(os.path.dirname(package_path) + "/ntrip_ros/config/ntrip_ros.yaml", "r")
-        yamlLines = yamlFile.readlines()
-        yamlLines[2] = "ntrip_user: " + self.lineUser.text() + "\n"
-        yamlLines[3] = "ntrip_pass: " + self.linePass.text() + "\n"
-        yamlLines[5] = "nmea_gga: " + self.lineNmea.text()
-        yamlFile = open(os.path.dirname(package_path) + "/ntrip_ros/config/ntrip_ros.yaml", "w")
-        yamlFile.writelines(yamlLines)
-        yamlFile.close()
+        self.yamlLines[2] = "ntrip_user: " + self.lineUser.text() + "\n"
+        self.yamlLines[3] = "ntrip_pass: " + self.linePass.text()
+        self.yamlLines[5] = "nmea_gga: " + self.lineNmea.text()
+        self.yamlFile = open(os.path.dirname(package_path) + "/ntrip_ros/config/ntrip_ros.yaml", "w")
+        self.yamlFile.writelines(self.yamlLines)
+        self.yamlFile.close()
 
 
 class MainWindow(QMainWindow):
