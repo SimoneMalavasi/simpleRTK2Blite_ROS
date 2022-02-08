@@ -9,6 +9,7 @@ from PySide2.QtWidgets import QApplication, QWidget, QMainWindow, QLabel, QPushB
 from PySide2.QtGui import QPixmap, QTransform, QFont
 import sys
 import os
+import timeit
 from sensor_msgs.msg import NavSatFix
 import math
 import numpy as np
@@ -225,6 +226,9 @@ class MainWindow(QMainWindow):
         self.percentageFix1 = 0.0
         self.percentageFix2 = 0.0
         self.keepCount = 0
+        self.logTime = 0.0
+        self.logStartTime = 0.0
+        self.logEndTime = 0.0
         self.bag_dir = ""
         self.bag_command = ""
         self.bag_command_sel = ""
@@ -319,16 +323,19 @@ class MainWindow(QMainWindow):
         self.keepCount = 1
         self.buttonStart.setVisible(0)
         self.buttonStop.setVisible(1)
+        self.logStartTime = timeit.default_timer()
         # BAG RECORDING
         if self.lineBag.text() != "":
-            self.bag_command = "rosbag record -O " + self.bag_dir + "/" + self.lineBag.text() + ".bag /gps1/fix /gps2/fix diagnostics"
+            self.bag_command = "rosbag record -O " + self.bag_dir + "/" + self.lineBag.text() + '.bag record -e "(.*)gps1(.*)"' + ' "(.*)gps2(.*)" diagnostics'
             print(self.bag_command)
             self.bag_command_sel = shlex.split(self.bag_command)
             self.bag_proc = subprocess.Popen(self.bag_command_sel)
 
     def stop_logging(self):
+        self.logEndTime = timeit.default_timer()
+        self.logTime = self.logEndTime - self.logStartTime
         txtLines = ['Bag Name: '+ self.lineBag.text(), 'GPS1 FIX: ' + str(self.percentageFix1) + "%", 'GPS2 FIX: ' +
-                    str(self.percentageFix2)+ '%']
+                    str(self.percentageFix2)+ '%', 'TIME: ' + str(self.logTime) + "s"]
         self.keepCount = 0
         self.countLogGps1 = 0.0  # counter for getting overall number GPS1 sample
         self.countLogGps2 = 0.0  # counter for getting overall number GPS2 sample
